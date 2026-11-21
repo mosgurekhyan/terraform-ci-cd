@@ -8,11 +8,7 @@
 crash.log
 
 # Ignore real variable files (Contains AWS Keys)
-*.tfvars
 *.tfvars.json
-
-# BUT keep the example file so others know what variables are needed!
-!*.tfvars.example
 
 # Ignore override files
 override.tf
