@@ -1,32 +1,59 @@
-name: Terraform CI/CD
+name: Terraform CI/CD (zero-downtime)
 
 on:
   push:
     branches: [main]
+    paths:
+      - "**.tf"
+      - "**.tfvars"
+      - ".github/workflows/terraform.yml"
   pull_request:
     branches: [main]
-  workflow_dispatch:      # allow manual run from Actions tab
+    paths:
+      - "**.tf"
+  workflow_dispatch:
 
 permissions:
   contents: read
+  id-token: write        # for OIDC (remove if using access keys)
 
 env:
   TF_VERSION: "1.9.5"
   AWS_REGION: "eu-central-1"
   TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false   # never cancel an in-flight apply
 
 jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
 
-    env:
-      AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    # ─────────────────────────────────────────────
+    # Option A: access keys (uncomment to use)
+    # ─────────────────────────────────────────────
+    # env:
+    #   AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-terraform
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
       - name: Show repo layout
         run: |
@@ -34,12 +61,7 @@ jobs:
           ls -la
           find . -name "*.tf" -not -path "./.terraform/*"
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Format Check
+      - name: Terraform Format
         run: terraform fmt -check -recursive
         continue-on-error: true
 
@@ -50,12 +72,21 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
+        env:
+          # every commit = new app_version = new instance rolled out
+          TF_VAR_app_version: ${{ github.sha }}
         run: terraform plan -input=false -out=tfplan
 
+      # ── Apply only on main branch pushes ─────────
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          TF_VAR_app_version: ${{ github.sha }}
         run: terraform apply -input=false -auto-approve tfplan
 
-      - name: Output Public IP
+      - name: Show outputs (URL)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform output -raw public_ip || true
+        run: |
+          echo "### 🚀 Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- **App URL:** $(terraform output -raw app_url)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
