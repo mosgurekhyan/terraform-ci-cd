@@ -1,0 +1,53 @@
+# ==========================================
+# Terraform Files
+# ==========================================
+# Ignore state files and backups (Contains sensitive data)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+crash.log
+
+# Ignore real variable files (Contains AWS Keys)
+*.tfvars
+*.tfvars.json
+
+# BUT keep the example file so others know what variables are needed!
+!*.tfvars.example
+
+# Ignore override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Exclude the .terraform directory
+.terraform/
+.terraform.lock.hcl
+
+# ==========================================
+# Secrets & SSH Keys
+# ==========================================
+# Ignore real SSH keys
+*.pem
+*.pub
+.env
+.env.*
+
+# ==========================================
+# Ansible Files
+# ==========================================
+# Ignore the generated inventory, but keep the example
+ansible/inventory.ini
+!ansible/inventory.ini.example
+
+# Ignore Ansible logs and collections
+*.log
+*.retry
+ansible/collections/
+
+# ==========================================
+# OS & Editor Files
+# ==========================================
+.DS_Store
+Thumbs.db
+.vscode/
