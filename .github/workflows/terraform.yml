@@ -15,40 +15,29 @@ on:
 
 permissions:
   contents: read
-  id-token: write        # for OIDC (remove if using access keys)
 
 env:
   TF_VERSION: "1.9.5"
   AWS_REGION: "eu-central-1"
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
+  
+  # Terraform automatically uses these to authenticate with AWS
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 concurrency:
   group: terraform-${{ github.ref }}
-  cancel-in-progress: false   # never cancel an in-flight apply
+  cancel-in-progress: false
 
 jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
 
-    # ─────────────────────────────────────────────
-    # Option A: access keys (uncomment to use)
-    # ─────────────────────────────────────────────
-    # env:
-    #   AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-    #   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          role-session-name: github-terraform
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -73,11 +62,9 @@ jobs:
 
       - name: Terraform Plan
         env:
-          # every commit = new app_version = new instance rolled out
           TF_VAR_app_version: ${{ github.sha }}
         run: terraform plan -input=false -out=tfplan
 
-      # ── Apply only on main branch pushes ─────────
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
