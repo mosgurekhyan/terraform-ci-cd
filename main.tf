@@ -155,8 +155,7 @@ variable "ssh_public_key" {
 }
 
 resource "aws_key_pair" "deployer" {
-  key_name = "terraform-key"
-  # Read from the variable instead of file()
+  key_name_prefix = "terraform-key-"
   public_key = var.ssh_public_key
 }
 
