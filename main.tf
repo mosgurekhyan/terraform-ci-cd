@@ -155,7 +155,7 @@ variable "ssh_public_key" {
 }
 
 resource "aws_key_pair" "deployer" {
-  key_name   = "terraform-key"
+  key_name = "terraform-key"
   # Read from the variable instead of file()
   public_key = var.ssh_public_key
 }
@@ -176,7 +176,7 @@ resource "aws_security_group" "server_security_group" {
       cidr_blocks = ["0.0.0.0/0"]
     }
   }
-  
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -192,9 +192,9 @@ resource "aws_instance" "myserver" {
   ami                    = var.ami_id
   instance_type          = "t3.micro"
   vpc_security_group_ids = [aws_security_group.server_security_group.id]
-  
+
   # ADDED: Attach the SSH Key back to the instance
-  key_name               = aws_key_pair.deployer.key_name
+  key_name = aws_key_pair.deployer.key_name
 
   user_data = <<-EOF
     #!/bin/bash
@@ -239,20 +239,20 @@ resource "aws_lb" "web" {
   load_balancer_type = "application"
   subnets            = data.aws_subnets.default.ids
   security_groups    = [aws_security_group.lb.id]
-  
+
   lifecycle { create_before_destroy = true }
 }
 
 resource "aws_lb_target_group" "web" {
-  name        = "nginx-tg"
-  port        = 80
-  protocol    = "HTTP"
-  vpc_id      = data.aws_vpc.default.id
-  
+  name     = "nginx-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = data.aws_vpc.default.id
+
   # ADDED: Explicitly define target type and health check protocol
   target_type = "instance"
-  
-  health_check { 
+
+  health_check {
     path     = "/"
     protocol = "HTTP"
     matcher  = "200"
