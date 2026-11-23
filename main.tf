@@ -148,11 +148,18 @@ data "aws_subnets" "default" {
   }
 }
 
-# --- ADDED: SSH Key Pair ---
+# Add this variable at the top of your main.tf (or variables.tf)
+variable "ssh_public_key" {
+  type        = string
+  description = "SSH public key for EC2 instances"
+}
+
 resource "aws_key_pair" "deployer" {
   key_name   = "terraform-key"
-  public_key = file("${path.module}/terraform_key.pem.pub")
+  # Read from the variable instead of file()
+  public_key = var.ssh_public_key
 }
+
 
 # --- SG (stable, unique name, safe replace) ---
 resource "aws_security_group" "server_security_group" {
