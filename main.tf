@@ -235,16 +235,15 @@ resource "aws_security_group" "lb" {
 }
 
 resource "aws_lb" "web" {
-  name               = "nginx-lb"
+  name_prefix        = "nginx-lb-"
   load_balancer_type = "application"
-  subnets            = data.aws_subnets.default.ids
   security_groups    = [aws_security_group.lb.id]
 
   lifecycle { create_before_destroy = true }
 }
 
 resource "aws_lb_target_group" "web" {
-  name     = "nginx-tg"
+  name_prefix = "nginx-tg-"
   port     = 80
   protocol = "HTTP"
   vpc_id   = data.aws_vpc.default.id
